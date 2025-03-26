@@ -1,0 +1,34 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: "go.mod"
+
+      - name: Build project
+        run: |
+          GOARCH=amd64 GOOS=linux go build -gcflags="-N -l" -ldflags="-s -w" -a -o bin/nat64 .
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            bin/nat64
+          repository: ${{ github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
