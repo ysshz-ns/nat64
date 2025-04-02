@@ -1,6 +1,6 @@
 # NAT64: A minimalistic NAT64 Server for Linux
 
-NAT64 is a minimalistic NAT64 server designed for Linux systems, enabling the forwarding of IPv6 TCP traffic to IPv4.
+NAT64 is a minimalistic NAT64 server designed for Linux systems, enabling the forwarding of IPv6 TCP/UDP traffic to IPv4.
 
 ## **Table of Contents**
 
@@ -36,9 +36,16 @@ To set up the NAT64 server, follow these steps:
 
    ```bash
    ip6tables -t mangle -A PREROUTING -d [your_prefix]/96 -p tcp -j TPROXY --on-port=8888 --on-ip=::1
+   ip6tables -t mangle -A PREROUTING -d [your_prefix]/96 -p udp -j TPROXY --on-port=8888 --on-ip=::1
    ```
 
-3. Run the server by executing the following command:
+3. Ensure the prefix subnet is accessible in firewall rules
+
+   ```bash
+   ip6tables -A INPUT -d [your_prefix]/96 -j ACCEPT
+   ```
+
+4. Run the server by executing the following command:
 
    ```bash
    /path/to/nat64
@@ -50,12 +57,14 @@ The NAT64 server relays IPv6 connections to IPv4 seamlessly. You can customize i
 
 ```
 Usage:
-    -p, --port     Port to listen on. Default port is 8888.
-    -w, --window   TCP window size. Requires the tcp-brutal kernel module.
-    -h, --help     Show this help message.
+    -p, --tcp-port     TCP Port to listen on. Default port is 8888. Set to 0 to disable.
+    -P, --udp-port     UDP Port to listen on. Default port is 8888. Set to 0 to disable.
+    -w, --window       TCP window size. Requires the tcp-brutal kernel module.
+    -h, --help         Show this help message.
 ```
 
-- **-p, --port:** Specify the port for the server to listen on. The default is `8888`.
+- **-p, --tcp-port:** Specify the TCP port for the server to listen on. The default is `8888`.
+- **-P, --udp-port:** Specify the UDP port for the server to listen on. The default is `8888`.
 - **-w, --window:** Set the TCP window size. Use this option if the default congestion control does not perform adequately, particularly in restrictive environments.
 - **-h, --help:** Display the help message.
 
@@ -79,7 +88,7 @@ You can run NAT64 as a service using either `systemd` or `OpenRC`. Below are ins
    After=network.target
 
    [Service]
-   ExecStart=/path/to/nat64 -p 8888
+   ExecStart=/path/to/nat64 -p 8888 -P 8888
    Restart=always
 
    [Install]
@@ -101,7 +110,7 @@ You can run NAT64 as a service using either `systemd` or `OpenRC`. Below are ins
    #!/sbin/openrc-run
 
    command=/path/to/nat64
-   command_args="-p 8888"
+   command_args="-p 8888 -P 8888"
    pidfile=/run/nat64.pid
 
    depend() {
