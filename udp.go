@@ -249,11 +249,9 @@ func NewWatchDog(timeout time.Duration) (ret *WatchDog) {
 }
 
 func (r *Relay) Close() {
-	if r.closed.Load() {
+	if !r.closed.CompareAndSwap(false, true) {
 		return
 	}
-
-	r.closed.Store(true)
 
 	r.watchdog.Close()
 	if r.natConn != nil {
