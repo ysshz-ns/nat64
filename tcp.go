@@ -5,22 +5,24 @@ import (
 	"io"
 	"log"
 	"net"
-	"sync"
 	"syscall"
 	"time"
 	"unsafe"
 )
 
-func tcpCopy(dst *net.TCPConn, src *net.TCPConn, wg *sync.WaitGroup) {
-	defer wg.Done()
-	if _, err := io.Copy(dst, src); err == nil || err == io.EOF {
+func tcpCopy(dst *net.TCPConn, src *net.TCPConn, result *Task[error]) {
+	_, err := io.Copy(dst, src)
+	if err == nil {
 		dst.CloseWrite()
 	} else {
-		log.Println(err)
 		// force timeout to prevent lingering connections
 		now := time.Now()
 		src.SetDeadline(now)
 		dst.SetDeadline(now)
+	}
+
+	if result != nil {
+		result.Resolve(err)
 	}
 }
 
@@ -76,12 +78,12 @@ func proxy(conn *net.TCPConn) {
 	}
 
 	defer remote.Close()
-
-	wg := &sync.WaitGroup{}
-	wg.Add(2)
-	go tcpCopy(conn, remote, wg)
-	go tcpCopy(remote, conn, wg)
-	wg.Wait()
+	result := NewTask[error]()
+	go tcpCopy(remote, conn, result)
+	tcpCopy(conn, remote, nil)
+	if err := result.GetResult(); err != nil {
+		log.Println(err)
+	}
 }
 
 func listenTCP(port string) (cancel func(), done chan error) {

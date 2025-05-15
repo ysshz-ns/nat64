@@ -99,6 +99,7 @@ func ParseArgs[T any](args *T) (argList []ArgListItem, rest []string) {
 
 		if strings.HasPrefix(commandline[i], "-") {
 			// unrecognized argument. ignore it
+			i++
 		} else {
 			// positional argument
 			rest = append(rest, commandline[i])
